@@ -4,6 +4,7 @@ arg=$1
 
 rm -rf repos
 mkdir -p repos
+mkdir -p ../addons
 
 download() {
 	while read url; do
