@@ -21,7 +21,6 @@ download() {
 			else
 				cp -r "$addons/$(basename "$addon")" .
 			fi
-			echo 
 		done
 		cd ../package_manager
 		if [ -e "$destination/.godotmodules" ]; then
