@@ -10,21 +10,23 @@ download() {
 	while read url; do
 		name=$(basename ${url%.git})
 		destination="repos/$name"
-		echo "${indent}[$name] from $url"
+		echo "$indent[$name] from $url"
 		git clone -q $url $destination
 		cd ../addons
-		for addon in ../package_manager/repos/${name}/addons/*; do
+		addons=../package_manager/repos/$name/addons
+		for addon in "$addons"/*; do
 			rm -rf "$(basename "$addon")"
 			if [ "$arg" = "--symlinks" ]; then
-				ln -sr ../package_manager/repos/${name}/addons/* .
+				ln -sr addons/* .
 			else
-				cp -r "../package_manager/repos/${name}/addons/$(basename "$addon")" .
+				cp -r "$addons/$(basename "$addon")" .
 			fi
+			echo 
 		done
 		cd ../package_manager
 		if [ -e "$destination/.godotmodules" ]; then
-			indent="${indent}\t"
-			download "${destination}/.godotmodules"
+			indent=$indent\t
+			download "$destination/.godotmodules"
 			indent=$(echo $indent | sed "s/^.//")
 		fi
 	done < $1
