@@ -17,7 +17,7 @@ download() {
 		for addon in "$addons"/*; do
 			rm -rf "$(basename "$addon")"
 			if [ "$arg" = "--symlinks" ]; then
-				ln -sr addons/* .
+				ln -sr "$addons/$(basename "$addon")" .
 			else
 				cp -r "$addons/$(basename "$addon")" .
 			fi
