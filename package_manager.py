@@ -18,6 +18,7 @@ def run_git_command(command, working_directory, verbose):
     passes the --quiet option to the command.
     """
     args = command.split(" ")
+    args.insert(0, "git")
     if not verbose:
         args.append("-q")
     subprocess.run(args, cwd=working_directory)
@@ -43,16 +44,16 @@ def download_addons(modules_file, verbose, indent=0):
     file = open(modules_file, "r")
     for dependency in file:
         repo, version = dependency.strip().split(" ")
-        name = repo.rstrip(".git").rstrip("/").split("/")[-1]
+        name = repo.split("/")[-1].split(".")[-2]
         print("	" * indent + f"[{name}] version {version[:6]} from {repo}")
 
         if os.path.isdir(f"repos/{name}"):
             print_verbose(f"repo already cloned, pulling and checking out {version}")
-            run_git_command("git pull origin master", f"repos/{name}", verbose)
+            run_git_command("pull origin master", f"repos/{name}", verbose)
         else:
             print_verbose(f"cloning {repo}")
-            run_git_command(f"git clone {repo}", "repos", verbose)
-        run_git_command(f"git checkout {version}", f"repos/{name}", verbose)
+            run_git_command(f"clone {repo}", "repos", verbose)
+        run_git_command(f"checkout {version}", f"repos/{name}", verbose)
 
         for addon in os.listdir(f"repos/{name}/addons"):
             print("	" * indent + f"	addon [{addon}]")
@@ -90,6 +91,14 @@ try:
 except (FileExistsError):
     print_verbose("repos or addons folder already existed")
 
+
+def print_repo_status():
+    """
+    Prints the git status of each cloned repository.
+    """
+    for repo in os.listdir("repos"):
+        run_git_command("status", f"repos/{repo}", True)
+
 mode = ""
 if len(sys.argv) > 1:
     mode = sys.argv[1]
@@ -100,6 +109,9 @@ if mode == "clean":
 elif mode == "cleanall":
     print("deleting addons and repos")
     clean_addons(verbose, True)
+elif mode == "status":
+    print("fetches the status of the cloned repos")
+    print_repo_status()
 elif mode == "help":
     print("update:	download or update modules")
     print("clean:	delete downloaded addons")
