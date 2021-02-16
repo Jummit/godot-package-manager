@@ -101,10 +101,12 @@ elif mode == "cleanall":
     print("deleting addons and repos")
     clean_addons(verbose, True)
 elif mode == "help":
-    print("update:	download or update modules")
-    print("clean:	delete downloaded addons")
-    print("cleanall:	delete addons and repos")
-    print("-v / --verbose:	enable verbose logging")
+    print("package_manager [option] [[-v] [--verbose]]")
+    print("update\n	Download or update modules.")
+    print("clean\n	Delete downloaded addons.")
+    print("cleanall\n	Delete addons and repos.")
+    print("status\n	Show the git status of all cloned repos.")
+    print("-v / --verbose\n	Enable verbose logging.")
 else:
     print("downloading modules")
     download_addons("../godotmodules.txt", verbose)
