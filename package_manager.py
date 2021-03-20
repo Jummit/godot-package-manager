@@ -57,7 +57,7 @@ def download_addons(modules_file, verbose, indent=0):
 
         for addon in os.listdir(f"repos/{name}/addons"):
             print("	" * indent + f"	addon [{addon}]")
-            destination = f"../addons/{addon}"
+            destination = f"../addons/third_party/{addon}"
             delete_addon(destination, verbose)
             try:
                 print_verbose(f"creating symlink to {destination}")
@@ -78,7 +78,7 @@ def clean_addons(verbose, repos=False):
     """
     for repo in os.listdir("repos"):
         for addon in os.listdir(f"repos/{repo}/addons"):
-            delete_addon(f"../addons/{addon}", verbose)
+            delete_addon(f"../addons/third_party/{addon}", verbose)
             print(f"deleting {addon}")
         if repos:
             shutil.rmtree(f"repos/{repo}")
@@ -88,6 +88,7 @@ try:
     print_verbose("creating repos and addons folder")
     os.mkdir("repos")
     os.mkdir("../addons")
+    os.mkdir("../addons/third_party")
 except (FileExistsError):
     print_verbose("repos or addons folder already existed")
 
