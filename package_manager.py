@@ -4,6 +4,8 @@ import shutil
 import sys
 
 verbose = "--verbose" in sys.argv or "-v" in sys.argv
+manager_dir = os.path.dirname(__file__)
+project_dir = os.path.dirname(manager_dir)
 
 if verbose:
     def print_verbose(*args):
@@ -47,27 +49,27 @@ def download_addons(modules_file, verbose, indent=0):
         name = repo.split("/")[-1].split(".")[-2]
         print("	" * indent + f"[{name}] version {version[:6]} from {repo}")
 
-        if os.path.isdir(f"repos/{name}"):
+        if os.path.isdir(f"{manager_dir}/repos/{name}"):
             print_verbose(f"repo already cloned, pulling and checking out {version}")
-            run_git_command("pull origin master", f"repos/{name}", verbose)
+            run_git_command("pull origin master", f"{manager_dir}/repos/{name}", verbose)
         else:
             print_verbose(f"cloning {repo}")
-            run_git_command(f"clone {repo}", "repos", verbose)
-        run_git_command(f"checkout {version}", f"repos/{name}", verbose)
+            run_git_command(f"clone {repo}", f"{manager_dir}/repos", verbose)
+        run_git_command(f"checkout {version}", f"{manager_dir}/repos/{name}", verbose)
 
-        for addon in os.listdir(f"repos/{name}/addons"):
+        for addon in os.listdir(f"{manager_dir}/repos/{name}/addons"):
             print("	" * indent + f"	addon [{addon}]")
-            destination = f"../addons/third_party/{addon}"
+            destination = f"{project_dir}/addons/third_party/{addon}"
             delete_addon(destination, verbose)
             try:
                 print_verbose(f"creating symlink to {destination}")
-                os.symlink(f"{os.getcwd()}/repos/{name}/addons/{addon}",
+                os.symlink(f"{manager_dir}/repos/{name}/addons/{addon}",
                         destination, True)
             except OSError:
                 print_verbose(f"symlink failed, copying instead")
-                shutil.copytree(f"repos/{name}/addons/{addon}", destination)
+                shutil.copytree(f"{manager_dir}/repos/{name}/addons/{addon}", destination)
 
-        submodule_file = f"repos/{name}/godotmodules.txt"
+        submodule_file = f"{manager_dir}repos/{name}/godotmodules.txt"
         if os.path.isfile(submodule_file):
             download_addons(submodule_file, verbose, indent + 1)
 
@@ -76,19 +78,19 @@ def clean_addons(verbose, repos=False):
     """
     Deletes downloaded addons, and cloned repositories if `repos` is true.
     """
-    for repo in os.listdir("repos"):
-        for addon in os.listdir(f"repos/{repo}/addons"):
-            delete_addon(f"../addons/third_party/{addon}", verbose)
+    for repo in os.listdir(f"{manager_dir}/repos"):
+        for addon in os.listdir(f"{manager_dir}/repos/{repo}/addons"):
+            delete_addon(f"{project_dir}/addons/third_party/{addon}", verbose)
             print(f"deleting {addon}")
         if repos:
-            shutil.rmtree(f"repos/{repo}")
+            shutil.rmtree(f"{manager_dir}/repos/{repo}")
             print(f"deleting repo {repo}")
 
 try:
     print_verbose("creating repos and addons folder")
-    os.mkdir("repos")
-    os.mkdir("../addons")
-    os.mkdir("../addons/third_party")
+    os.mkdir(f"{manager_dir}/repos")
+    os.mkdir(f"{project_dir}/addons")
+    os.mkdir(f"{project_dir}/addons/third_party")
 except (FileExistsError):
     print_verbose("repos or addons folder already existed")
 
@@ -98,7 +100,7 @@ def print_repo_status():
     Prints the git status of each cloned repository.
     """
     for repo in os.listdir("repos"):
-        run_git_command("status", f"repos/{repo}", True)
+        run_git_command("status", f"{project_dir}repos/{repo}", True)
 
 mode = ""
 if len(sys.argv) > 1:
@@ -122,4 +124,4 @@ elif mode == "help":
     print("-v / --verbose\n	Enable verbose logging.")
 else:
     print("downloading modules")
-    download_addons("../godotmodules.txt", verbose)
+    download_addons(f"{project_dir}/godotmodules.txt", verbose)
