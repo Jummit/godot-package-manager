@@ -40,13 +40,18 @@ def delete_addon(addon, verbose):
 
 def download_addons(modules_file, verbose, indent=0):
     """
-    Clones or updates the github repositories listed in `modules_file`
+    Clones or updates the repositories listed in `modules_file`
     and either copies or creates symlinks to the addons of the module.
     """
     file = open(modules_file, "r")
     for dependency in file:
         repo, version = dependency.strip().split(" ")
-        name = repo.split("/")[-1].split(".")[-2]
+        if "/.git" in repo:
+            # Get the name of a local git repo like `/path/to/repo/.git`.
+            name = repo.split("/")[-2]
+        else:
+            # Get the name of a git url like `https://github.com/user/repo.git`
+            name = repo.split("/")[-1].split(".")[-2]
         print("	" * indent + f"[{name}] version {version[:6]} from {repo}")
 
         if os.path.isdir(f"{manager_dir}/repos/{name}"):
