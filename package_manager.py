@@ -66,13 +66,18 @@ def download_addons(modules_file, verbose, indent=0):
             print("	" * indent + f"	addon [{addon}]")
             destination = f"{project_dir}/addons/third_party/{addon}"
             delete_addon(destination, verbose)
-            try:
-                print_verbose(f"creating symlink to {destination}")
-                os.symlink(f"{manager_dir}/repos/{name}/addons/{addon}",
-                        destination, True)
-            except OSError:
-                print_verbose(f"symlink failed, copying instead")
+            do_copy = "--links" not in sys.argv and "-l" not in sys.argv
+            if not do_copy:
+                try:
+                    print_verbose(f"creating symlink to {destination}")
+                    os.symlink(f"{manager_dir}/repos/{name}/addons/{addon}",
+                            destination, True)
+                except OSError:
+                    print_verbose(f"symlink failed, copying instead")
+                    do_copy = True
+            if do_copy:
                 shutil.copytree(f"{manager_dir}/repos/{name}/addons/{addon}", destination)
+                    
 
         submodule_file = f"{manager_dir}repos/{name}/godotmodules.txt"
         if os.path.isfile(submodule_file):
@@ -104,8 +109,8 @@ def print_repo_status():
     """
     Prints the git status of each cloned repository.
     """
-    for repo in os.listdir("repos"):
-        run_git_command("status", f"{project_dir}repos/{repo}", True)
+    for repo in os.listdir(f"{manager_dir}/repos"):
+        run_git_command("status", f"{manager_dir}/repos/{repo}", True)
 
 mode = ""
 if len(sys.argv) > 1:
@@ -121,12 +126,13 @@ elif mode == "status":
     print("fetches the status of the cloned repos")
     print_repo_status()
 elif mode == "help":
-    print("package_manager [option] [[-v] [--verbose]]")
+    print("package_manager [option] [[-v] [-l] [--verbose]]")
     print("update\n	Download or update modules.")
     print("clean\n	Delete downloaded addons.")
     print("cleanall\n	Delete addons and repos.")
     print("status\n	Show the git status of all cloned repos.")
     print("-v / --verbose\n	Enable verbose logging.")
+    print("-l / --link\n Use symbolic links to copy addons into the addons folder")
 else:
     print("downloading modules")
     download_addons(f"{project_dir}/godotmodules.txt", verbose)
