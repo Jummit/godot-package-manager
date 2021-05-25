@@ -13,8 +13,8 @@ To install addons, create a `godotmodules.txt` file in the root folder of your g
 So for example:
 
 ```
-git@github.com:User/module-name.git a8a52345a7abde2`
-git@github.com:User/module-name.git master`
+git@github.com:User/module-name.git a8a52345a7abde2
+git@github.com:User/module-name.git master
 ```
 
 To download or update the addons, run `python2.9 package_manager.py`. Run `python2.9 package_manager.py help` for help.
