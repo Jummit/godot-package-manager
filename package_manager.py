@@ -124,16 +124,16 @@ elif mode == "cleanall":
     print("deleting addons and repos")
     clean_addons(verbose, True)
 elif mode == "status":
-    print("fetches the status of the cloned repos")
+    print("fetching the status of the cloned repos")
     print_repo_status()
-elif mode == "help":
-    print("package_manager [option] [[-v] [-l] [--verbose]]")
-    print("update\n	Download or update modules.")
-    print("clean\n	Delete downloaded addons.")
-    print("cleanall\n	Delete addons and repos.")
-    print("status\n	Show the git status of all cloned repos.")
-    print("-v / --verbose\n	Enable verbose logging.")
-    print("-l / --link\n Use symbolic links to copy addons into the addons folder")
-else:
+elif mode == "update":
     print("downloading modules")
     download_addons(f"{project_dir}/godotmodules.txt", verbose)
+else:
+    print("usage: package_manager [option]")
+    print("update		Download or update modules")
+    print("clean		Delete downloaded addons")
+    print("cleanall	Delete addons and repos")
+    print("status		Show the git status of all cloned repos")
+    print("-v / --verbose	Enable verbose logging")
+    print("-l / --link	Use symbolic links to copy addons into the addons folder")
