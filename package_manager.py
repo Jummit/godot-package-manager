@@ -120,7 +120,7 @@ def print_repo_status():
     Prints the git status of each cloned repository.
     """
     for repo in os.listdir(f"{manager_dir}/repos"):
-        run_git_command("status", f"{manager_dir}/repos/{repo}", True)
+        run_git_command("status", f"{manager_dir}/repos/{repo}")
 
 
 def install_addon(name):
