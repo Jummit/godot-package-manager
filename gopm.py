@@ -8,20 +8,15 @@ import json
 import tempfile
 
 verbose = "--verbose" in sys.argv or "-v" in sys.argv
-try:
-    sys.argv.remove("--verbose")
-    sys.argv.remove("-v")
-except ValueError:
-    pass
-project_dir = os.getcwd()
-tmp_repos_dir = os.path.join(tempfile.gettempdir(), "godot_packages")
-
 if verbose:
     def print_verbose(*args):
         for arg in args:
             print(arg)
 else:   
     print_verbose = lambda *a: None
+
+tmp_repos_dir = os.path.join(tempfile.gettempdir(), "godot_packages")
+project_dir = os.getcwd()
 
 def run_git_command(command, working_directory):
     """
@@ -111,9 +106,10 @@ def browse_github(name):
         print(f"[{result_num + 1}] {result['full_name']}")
         print(f"    {result['description']}")
     try:
-        package_num = int(input("Package to install [1]: "))
+        package_num = int(input("Package to install: "))
     except ValueError:
-        package_num = 1
+        print("no package selected")
+        return
     selected = items[package_num - 1]
     dependency = f"{selected['clone_url']} {selected['default_branch']}"
     install_package(dependency)
@@ -164,23 +160,26 @@ for possible_mode in MODES:
         if flag in sys.argv:
             mode = possible_mode
             break
+
 package = ""
+allflags = ["-v", "--verbose"]
+for flags in MODES.values():
+    allflags += flags
 for arg in sys.argv[1:]:
-    # TODO: Support file names with - in their name.
-    if not "-" in arg:
+    if not arg in allflags:
         package += arg + " "
 
-if mode != "help":
+if mode in ["install", "remove"] and not package:
+    print("no package specified")
+    exit()
+elif mode != "help":
+    # Doing an operation which requires an addons folder.
     try:
         print_verbose("creating addons folder")
         os.mkdir(f"{project_dir}/addons")
         os.mkdir(f"{project_dir}/addons/third_party")
     except (FileExistsError):
         print_verbose("addons folder already existed")
-
-if mode in ["install", "remove"] and not package:
-    print("no package specified")
-    exit()
 
 if mode == "update":
     update_packages(f"{project_dir}/godotmodules.txt")
