@@ -23,6 +23,7 @@ def run_git_command(command, working_directory):
     Runs a git command inside `working_directory`. If `verbose` is false,
     passes the --quiet option to the command.
     """
+    print_verbose("running git " + command + " inside " + working_directory)
     args = command.split(" ")
     args.insert(0, "git")
     if not verbose:
@@ -35,12 +36,13 @@ def update_packages(modules_file, indent=0):
     Clones or updates the repositories listed in `modules_file`
     and installs the addons of the module.
     """
-    try:
-        with open(modules_file, "r") as file:
-            for package in file:
-                update_package(package)
-    except FileNotFoundError:
-        print("no packages installed")
+    # try:
+    with open(modules_file, "r") as file:
+        for package in file:
+            update_package(package)
+    # except FileNotFoundError:
+    #     print_verbose("couldn't find " + modules_file)
+    #     print("no packages installed")
 
 
 def update_package(package, indent=0):
@@ -57,9 +59,6 @@ def update_package(package, indent=0):
         # Get the name of a git url like `https://github.com/user/repo.git`
         name = repo.split("/")[-1].split(".")[-2]
     print("	" * indent + f"[{name}] version {version[:6]} from {repo}")
-    print_verbose(f"cloning {repo}")
-    if os.path.isdir(f"{tmp_repos_dir}/{name}"):
-            shutil.rmtree(f"{tmp_repos_dir}/{name}")
     run_git_command(f"clone {repo}", f"{tmp_repos_dir}")
     run_git_command(f"checkout {version}", f"{tmp_repos_dir}/{name}")
 
@@ -95,11 +94,11 @@ def browse_github(name):
     Searches Github for packages and asks the user which one to install.
     """
     query = f"https://api.github.com/search/repositories?q={name} language:GDScript&per_page=10"
-    print_verbose(query)
+    print_verbose("query: " + query)
     text = requests.get(query).text
     items = json.loads(text).get("items")
     if len(items) == 0:
-        print("no modules found")
+        print("no packages found")
         return
     for result_num in range(len(items)):
         result = items[result_num]
@@ -175,11 +174,12 @@ if mode in ["install", "remove"] and not package:
 elif mode != "help":
     # Doing an operation which requires an addons folder.
     try:
-        print_verbose("creating addons folder")
+        print_verbose("trying to create addons folder")
+        os.mkdir(tmp_repos_dir)
         os.mkdir(f"{project_dir}/addons")
         os.mkdir(f"{project_dir}/addons/third_party")
     except (FileExistsError):
-        print_verbose("addons folder already existed")
+        pass
 
 if mode == "update":
     update_packages(f"{project_dir}/godotmodules.txt")
@@ -198,3 +198,5 @@ elif mode == "help":
     print("-r / --remove    Uninstall the specified package")
     print("-v / --verbose   Enable verbose logging")
     print("-h / --help      Show this help message")
+
+os.rmdir(tmp_repos_dir)
