@@ -16,6 +16,7 @@ else:
     print_verbose = lambda *a: None
 
 tmp_repos_dir = os.path.join(tempfile.gettempdir(), "godot_packages")
+os.mkdir(tmp_repos_dir)
 project_dir = os.getcwd()
 
 def run_git_command(command, working_directory):
@@ -64,7 +65,7 @@ def update_package(package, indent=0):
 
     for addon in os.listdir(f"{tmp_repos_dir}/{name}/addons"):
         print("	" * indent + f"	addon [{addon}]")
-        destination = f"{project_dir}/addons/third_party/{addon}"
+        destination = f"{project_dir}/addons/{addon}"
         if os.path.isdir(destination):
             shutil.rmtree(destination)
         shutil.copytree(f"{tmp_repos_dir}/{name}/addons/{addon}", destination)
@@ -110,7 +111,9 @@ def browse_github(name):
         print("no package selected")
         return
     selected = items[package_num - 1]
-    dependency = f"{selected['clone_url']} {selected['default_branch']}"
+    last_commit = requests.get(selected.get("commits_url").replace('{/sha}', "")).json()[0].get("sha")[:7]
+    dependency = f"{selected['clone_url']} {last_commit}"
+    print_verbose(dependency)
     install_package(dependency)
 
 
@@ -124,7 +127,7 @@ def remove_package(addon):
             for line in modulesfile.readlines():
                 if line == "":
                     continue
-                if not addon in line.lower():
+                if not addon.strip().lower() in line.lower():
                     modules += line
                     continue
                 print_verbose(f"removed {line}")
@@ -139,7 +142,7 @@ def remove_package(addon):
                 run_git_command(f"clone {repo}", f"{tmp_repos_dir}")
                 run_git_command(f"checkout {version}", f"{tmp_repos_dir}/{name}")
                 for addon in os.listdir(f"{tmp_repos_dir}/{name}/addons"):
-                    shutil.rmtree(f"{project_dir}/addons/third_party/{addon}")
+                    shutil.rmtree(f"{project_dir}/addons/{addon}")
                     print(f"removed [{addon}]")
                 shutil.rmtree(f"{tmp_repos_dir}/{name}")
         with open(f"{project_dir}/godotmodules.txt", "w") as modulesfile:
@@ -174,10 +177,7 @@ if mode in ["install", "remove"] and not package:
 elif mode != "help":
     # Doing an operation which requires an addons folder.
     try:
-        print_verbose("trying to create addons folder")
-        os.mkdir(tmp_repos_dir)
         os.mkdir(f"{project_dir}/addons")
-        os.mkdir(f"{project_dir}/addons/third_party")
     except (FileExistsError):
         pass
 
@@ -193,10 +193,10 @@ elif mode == "remove":
     remove_package(package)
 elif mode == "help":
     print("Usage: gopm {-u|-i|-r} [-v] <package> ...")
-    print("-u / --update    Update all packages")
-    print("-i / --install   Install a package from a git URI or search and install a package from Github")
-    print("-r / --remove    Uninstall the specified package")
-    print("-v / --verbose   Enable verbose logging")
-    print("-h / --help      Show this help message")
+    print("-u / --update         Update all packages")
+    print("-i / --install        Install a package from a git URI or search and install a package from Github")
+    print("-r / --remove         Uninstall the specified package")
+    print("-v / --verbose        Enable verbose logging")
+    print("-h / --help           Show this help message")
 
 os.rmdir(tmp_repos_dir)

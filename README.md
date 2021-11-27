@@ -19,7 +19,7 @@ URI or search and install a package from Github
 
 `-h / --help` Show this help message
 
-Installed addons will be put in the `addons/third_party` folder.
+Installed addons will be put in the `addons` folder.
 
 ## Creating Packages
 
