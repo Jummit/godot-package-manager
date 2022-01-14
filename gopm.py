@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.9
+#!/usr/bin/env python3
 import os
 import subprocess
 import shutil
@@ -16,7 +16,10 @@ else:
     print_verbose = lambda *a: None
 
 tmp_repos_dir = os.path.join(tempfile.gettempdir(), "godot_packages")
-os.mkdir(tmp_repos_dir)
+try:
+    os.mkdir(tmp_repos_dir)
+except FileExistsError:
+    pass
 project_dir = os.getcwd()
 
 def run_git_command(command, working_directory):
@@ -29,7 +32,8 @@ def run_git_command(command, working_directory):
     args.insert(0, "git")
     if not verbose:
         args.append("-q")
-    subprocess.run(args, cwd=working_directory)
+    return subprocess.run(
+            args, cwd=working_directory, stdout=subprocess.PIPE).stdout
 
 
 def update_packages(modules_file, indent=0):
@@ -37,13 +41,9 @@ def update_packages(modules_file, indent=0):
     Clones or updates the repositories listed in `modules_file`
     and installs the addons of the module.
     """
-    # try:
     with open(modules_file, "r") as file:
         for package in file:
             update_package(package)
-    # except FileNotFoundError:
-    #     print_verbose("couldn't find " + modules_file)
-    #     print("no packages installed")
 
 
 def update_package(package, indent=0):
@@ -74,6 +74,39 @@ def update_package(package, indent=0):
     submodule_file = f"{tmp_repos_dir}/{name}/godotmodules.txt"
     if os.path.isfile(submodule_file):
         update_packages(submodule_file, indent + 1)
+
+
+def upgrade_packages(modules_file, indent=0):
+    """
+    Clones the repositories listed in `modules_file`
+    and changes the version if there is a new commit.
+    """
+    with open(modules_file, "r") as file:
+        for package in file:
+            if package:
+                upgrade_package(package)
+
+
+def upgrade_package(package):
+    """
+    Clones the given repository and puts the version in the godotmodules file.
+    """
+    repo = package.split()[0]
+    run_git_command(f"clone {repo} to_upgrade", f"{tmp_repos_dir}")
+    latest_commit = run_git_command("rev-parse HEAD",
+            f"{tmp_repos_dir}/to_upgrade").decode('UTF-8')[:7]
+    shutil.rmtree(f"{tmp_repos_dir}/to_upgrade")
+    print(f"upgrading {repo} to {latest_commit}")
+    
+    modules = ""
+    with open(f"{project_dir}/godotmodules.txt", "r") as modulesfile:
+        for line in modulesfile.readlines():
+            if package.strip() in line:
+                modules += f"{repo} {latest_commit}\n"
+            else:
+                modules += line
+    with open(f"{project_dir}/godotmodules.txt", "w") as modulesfile:
+        modulesfile.write(modules)
 
 
 def install_package(name):
@@ -152,6 +185,7 @@ def remove_package(addon):
 
 MODES = {
     "update": ["-u", "--update"],
+    "upgrade": ["-s", "--upgrade"],
     "install": ["-i", "--install"],
     "remove": ["-r", "--remove"],
     "help": ["-h", "--help"],
@@ -183,6 +217,8 @@ elif mode != "help":
 
 if mode == "update":
     update_packages(f"{project_dir}/godotmodules.txt")
+elif mode == "upgrade":
+    upgrade_packages(f"{project_dir}/godotmodules.txt")
 elif mode == "install":
     if package.endswith(".git"):
         install_package(package)
@@ -193,7 +229,8 @@ elif mode == "remove":
     remove_package(package)
 elif mode == "help":
     print("Usage: gopm {-u|-i|-r} [-v] <package> ...")
-    print("-u / --update         Update all packages")
+    print("-u / --update         Download all packages")
+    print("-s / --upgrade        Upgrade all packages to the latest version")
     print("-i / --install        Install a package from a git URI or search and install a package from Github")
     print("-r / --remove         Uninstall the specified package")
     print("-v / --verbose        Enable verbose logging")

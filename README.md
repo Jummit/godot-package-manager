@@ -10,6 +10,8 @@ Run `gopm.py` in the game directory. See `gopm -h` to show the help:
 
 `-u / --update` Update all packages
 
+`-s / --upgrade` Upgrade all packages to the latest version
+
 `-i / --install` Install a package from a git 
 URI or search and install a package from Github
 
