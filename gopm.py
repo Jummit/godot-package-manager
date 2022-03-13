@@ -25,7 +25,7 @@ def run_git_command(command, working_directory):
     Runs a git command inside `working_directory`. If `verbose` is false,
     passes the --quiet option to the command.
     """
-    print_verbose("running git " + command + " inside " + working_directory)
+    print_verbose("Running git " + command + " inside " + working_directory)
     args = command.split(" ")
     args.insert(0, "git")
     if not verbose:
@@ -79,8 +79,6 @@ def upgrade_packages(modules_file, indent=0):
     Clones the repositories listed in `modules_file`
     and changes the version if there is a new commit.
     """
-    if not os.path.isfile(modules_file):
-        return print("File modules.txt not found. Are any packages installed?")
     with open(modules_file, "r") as file:
         for package in file:
             if package:
@@ -96,7 +94,7 @@ def upgrade_package(package):
     latest_commit = run_git_command("rev-parse HEAD",
             f"{tmp_repos_dir}/to_upgrade").decode('UTF-8')[:7]
     shutil.rmtree(f"{tmp_repos_dir}/to_upgrade")
-    print(f"upgrading {repo} to {latest_commit}")
+    print(f"Upgrading {repo} to {latest_commit}")
     
     modules = ""
     with open(f"{project_dir}/godotmodules.txt", "r") as modulesfile:
@@ -116,10 +114,10 @@ def install_package(name):
     open(f"{project_dir}/godotmodules.txt", 'a').close()
     with open(f"{project_dir}/godotmodules.txt", "r+") as modulesfile:
         if any((name in line) for line in modulesfile):
-            print("already installed")
+            print("Already installed")
             return
         else:
-            print(f"installed {name}")
+            print(f"Installed {name}")
             modulesfile.write(name + "\n")
 
 
@@ -132,7 +130,7 @@ def browse_github(name):
     text = requests.get(query).text
     items = json.loads(text).get("items")
     if len(items) == 0:
-        print("no packages found")
+        print("No packages found")
         return
     for result_num in range(len(items)):
         result = items[result_num]
@@ -141,7 +139,7 @@ def browse_github(name):
     try:
         package_num = int(input("Package to install: "))
     except ValueError:
-        print("no package selected")
+        print("No package selected")
         return
     selected = items[package_num - 1]
     last_commit = requests.get(selected.get("commits_url").replace('{/sha}', "")).json()[0].get("sha")[:7]
@@ -164,7 +162,7 @@ def remove_package(addon):
             if not addon.strip().lower() in line.lower():
                 modules += line
                 continue
-            print_verbose(f"removed {line}")
+            print_verbose(f"Removed {line}")
             repo, version = line.strip().split(" ")
             if "/.git" in repo:
                 # Get the name of a local git repo like `/path/to/repo/.git`.
@@ -172,12 +170,12 @@ def remove_package(addon):
             else:
                 # Get the name of a git url like `https://github.com/user/repo.git`
                 name = repo.split("/")[-1].split(".")[-2]
-            print_verbose(f"cloning {repo} into {tmp_repos_dir}")
+            print_verbose(f"Cloning {repo} into {tmp_repos_dir}")
             run_git_command(f"clone {repo}", f"{tmp_repos_dir}")
             run_git_command(f"checkout {version}", f"{tmp_repos_dir}/{name}")
             for addon in os.listdir(f"{tmp_repos_dir}/{name}/addons"):
                 shutil.rmtree(f"{project_dir}/addons/{addon}")
-                print(f"removed [{addon}]")
+                print(f"Removed [{addon}]")
             shutil.rmtree(f"{tmp_repos_dir}/{name}")
     with open(f"{project_dir}/godotmodules.txt", "w") as modulesfile:
         modulesfile.write(modules)
@@ -217,7 +215,7 @@ def main():
             package += arg + " "
 
     if mode in ["install", "remove"] and not package:
-        return print("no package specified")
+        return print("No package specified")
 
     modules_file = f"{project_dir}/godotmodules.txt"
     if mode in ["update", "upgrade", "remove"] and not os.path.isfile(modules_file):
