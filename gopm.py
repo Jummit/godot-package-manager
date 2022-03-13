@@ -183,51 +183,9 @@ def remove_package(addon):
     except FileNotFoundError:
         print("no packages installed")
 
-MODES = {
-    "update": ["u", "update"],
-    "upgrade": ["s", "upgrade"],
-    "install": ["i", "install"],
-    "remove": ["r", "remove"],
-    "help": ["h", "help"],
-}
-mode = "help"
-for possible_mode in MODES:
-    for flag in MODES[possible_mode]:
-        if flag in sys.argv:
-            mode = possible_mode
-            break
 
-package = ""
-allflags = ["-v", "--verbose"]
-for flags in MODES.values():
-    allflags += flags
-for arg in sys.argv[1:]:
-    if not arg in allflags:
-        package += arg + " "
-
-if mode in ["install", "remove"] and not package:
-    print("no package specified")
-    exit()
-elif mode != "help":
-    # Doing an operation which requires an addons folder.
-    try:
-        os.mkdir(f"{project_dir}/addons")
-    except (FileExistsError):
-        pass
-
-if mode == "update":
-    update_packages(f"{project_dir}/godotmodules.txt")
-elif mode == "upgrade":
-    upgrade_packages(f"{project_dir}/godotmodules.txt")
-elif mode == "install":
-    if package.endswith(".git"):
-        install_package(package)
-    else:
-        browse_github(package)
-    update_packages(f"{project_dir}/godotmodules.txt")
-elif mode == "remove":
-    remove_package(package)
-elif mode == "help":
+def show_help():
+    """Shows the command line usage of the program."""
     print("Usage: gopm [COMMAND] [-v] <package> ...")
     print("u / update         Download all packages")
     print("s / upgrade        Upgrade all packages to the latest version")
@@ -236,4 +194,54 @@ elif mode == "help":
     print("-v / --verbose        Enable verbose logging")
     print("h / help           Show this help message")
 
-os.rmdir(tmp_repos_dir)
+MODES = {
+    "update": ["u", "update"],
+    "upgrade": ["s", "upgrade"],
+    "install": ["i", "install"],
+    "remove": ["r", "remove"],
+    "help": ["h", "help"],
+}
+def main():
+    mode = "help"
+    for possible_mode in MODES:
+        for flag in MODES[possible_mode]:
+            if flag in sys.argv:
+                mode = possible_mode
+                break
+    package = ""
+    allflags = ["-v", "--verbose"]
+    for flags in MODES.values():
+        allflags += flags
+    for arg in sys.argv[1:]:
+        if not arg in allflags:
+            package += arg + " "
+
+    if mode in ["install", "remove"] and not package:
+        print("no package specified")
+        exit()
+    elif mode != "help":
+        # Doing an operation which requires an addons folder.
+        try:
+            os.mkdir(f"{project_dir}/addons")
+        except (FileExistsError):
+            pass
+
+    if mode == "update":
+        update_packages(f"{project_dir}/godotmodules.txt")
+    elif mode == "upgrade":
+        upgrade_packages(f"{project_dir}/godotmodules.txt")
+    elif mode == "install":
+        if package.endswith(".git"):
+            install_package(package)
+        else:
+            browse_github(package)
+        update_packages(f"{project_dir}/godotmodules.txt")
+    elif mode == "remove":
+        remove_package(package)
+    elif mode == "help":
+        show_help()
+
+    os.rmdir(tmp_repos_dir)
+
+if __name__ == "__main__":
+    main()
