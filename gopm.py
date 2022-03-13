@@ -184,12 +184,12 @@ def remove_package(addon):
 def show_help():
     """Shows the command line usage of the program."""
     print("Usage: gopm [COMMAND] [-v] <package> ...")
-    print("u / update         Download all packages")
-    print("s / upgrade        Upgrade all packages to the latest version")
-    print("i / install        Install a package from a git URI or search and install a package from Github")
-    print("r / remove         Uninstall the specified package")
-    print("-v / --verbose        Enable verbose logging")
-    print("-h / --help           Show this help message")
+    print("u / update       Download all packages")
+    print("s / upgrade      Upgrade all packages to the latest version")
+    print("i / install      Install a package from a git URI or search and install a package from Github")
+    print("r / remove       Uninstall the specified package")
+    print("-v / --verbose   Enable verbose logging")
+    print("-h / --help      Show this help message")
 
 MODES = {
     "update": ["u", "update"],
