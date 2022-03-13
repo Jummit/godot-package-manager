@@ -16,10 +16,8 @@ else:
     print_verbose = lambda *a: None
 
 tmp_repos_dir = os.path.join(tempfile.gettempdir(), "godot_packages")
-try:
+if not os.path.exists(tmp_repos_dir):
     os.mkdir(tmp_repos_dir)
-except FileExistsError:
-    pass
 project_dir = os.getcwd()
 
 def run_git_command(command, working_directory):
@@ -81,6 +79,8 @@ def upgrade_packages(modules_file, indent=0):
     Clones the repositories listed in `modules_file`
     and changes the version if there is a new commit.
     """
+    if not os.path.isfile(modules_file):
+        return print("File modules.txt not found. Are any packages installed?")
     with open(modules_file, "r") as file:
         for package in file:
             if package:
@@ -155,33 +155,32 @@ def remove_package(addon):
     Removes a package from the godotmodules file.
     """
     modules = ""
-    try:
-        with open(f"{project_dir}/godotmodules.txt", "r") as modulesfile:
-            for line in modulesfile.readlines():
-                if line == "":
-                    continue
-                if not addon.strip().lower() in line.lower():
-                    modules += line
-                    continue
-                print_verbose(f"removed {line}")
-                repo, version = line.strip().split(" ")
-                if "/.git" in repo:
-                    # Get the name of a local git repo like `/path/to/repo/.git`.
-                    name = repo.split("/")[-2]
-                else:
-                    # Get the name of a git url like `https://github.com/user/repo.git`
-                    name = repo.split("/")[-1].split(".")[-2]
-                print_verbose(f"cloning {repo} into {tmp_repos_dir}")
-                run_git_command(f"clone {repo}", f"{tmp_repos_dir}")
-                run_git_command(f"checkout {version}", f"{tmp_repos_dir}/{name}")
-                for addon in os.listdir(f"{tmp_repos_dir}/{name}/addons"):
-                    shutil.rmtree(f"{project_dir}/addons/{addon}")
-                    print(f"removed [{addon}]")
-                shutil.rmtree(f"{tmp_repos_dir}/{name}")
-        with open(f"{project_dir}/godotmodules.txt", "w") as modulesfile:
-            modulesfile.write(modules)
-    except FileNotFoundError:
-        print("no packages installed")
+    if not os.path.isfile(f"{project_dir}/godotmodules.txt"):
+        return print("No packages installed")
+    with open(f"{project_dir}/godotmodules.txt", "r") as modulesfile:
+        for line in modulesfile.readlines():
+            if line == "":
+                continue
+            if not addon.strip().lower() in line.lower():
+                modules += line
+                continue
+            print_verbose(f"removed {line}")
+            repo, version = line.strip().split(" ")
+            if "/.git" in repo:
+                # Get the name of a local git repo like `/path/to/repo/.git`.
+                name = repo.split("/")[-2]
+            else:
+                # Get the name of a git url like `https://github.com/user/repo.git`
+                name = repo.split("/")[-1].split(".")[-2]
+            print_verbose(f"cloning {repo} into {tmp_repos_dir}")
+            run_git_command(f"clone {repo}", f"{tmp_repos_dir}")
+            run_git_command(f"checkout {version}", f"{tmp_repos_dir}/{name}")
+            for addon in os.listdir(f"{tmp_repos_dir}/{name}/addons"):
+                shutil.rmtree(f"{project_dir}/addons/{addon}")
+                print(f"removed [{addon}]")
+            shutil.rmtree(f"{tmp_repos_dir}/{name}")
+    with open(f"{project_dir}/godotmodules.txt", "w") as modulesfile:
+        modulesfile.write(modules)
 
 
 def show_help():
@@ -192,15 +191,16 @@ def show_help():
     print("i / install        Install a package from a git URI or search and install a package from Github")
     print("r / remove         Uninstall the specified package")
     print("-v / --verbose        Enable verbose logging")
-    print("h / help           Show this help message")
+    print("-h / --help           Show this help message")
 
 MODES = {
     "update": ["u", "update"],
     "upgrade": ["s", "upgrade"],
     "install": ["i", "install"],
     "remove": ["r", "remove"],
-    "help": ["h", "help"],
+    "help": ["-h", "--help"],
 }
+
 def main():
     mode = "help"
     for possible_mode in MODES:
@@ -217,25 +217,22 @@ def main():
             package += arg + " "
 
     if mode in ["install", "remove"] and not package:
-        print("no package specified")
-        exit()
-    elif mode != "help":
-        # Doing an operation which requires an addons folder.
-        try:
-            os.mkdir(f"{project_dir}/addons")
-        except (FileExistsError):
-            pass
+        return print("no package specified")
+
+    modules_file = f"{project_dir}/godotmodules.txt"
+    if mode in ["update", "upgrade", "remove"] and not os.path.isfile(modules_file):
+        return print("No packages installed")
 
     if mode == "update":
-        update_packages(f"{project_dir}/godotmodules.txt")
+        update_packages(modules_file)
     elif mode == "upgrade":
-        upgrade_packages(f"{project_dir}/godotmodules.txt")
+        upgrade_packages(modules_file)
     elif mode == "install":
         if package.endswith(".git"):
             install_package(package)
         else:
             browse_github(package)
-        update_packages(f"{project_dir}/godotmodules.txt")
+        update_packages(modules_file)
     elif mode == "remove":
         remove_package(package)
     elif mode == "help":
