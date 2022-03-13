@@ -184,11 +184,11 @@ def remove_package(addon):
         print("no packages installed")
 
 MODES = {
-    "update": ["-u", "--update"],
-    "upgrade": ["-s", "--upgrade"],
-    "install": ["-i", "--install"],
-    "remove": ["-r", "--remove"],
-    "help": ["-h", "--help"],
+    "update": ["u", "update"],
+    "upgrade": ["s", "upgrade"],
+    "install": ["i", "install"],
+    "remove": ["r", "remove"],
+    "help": ["h", "help"],
 }
 mode = "help"
 for possible_mode in MODES:
@@ -228,12 +228,12 @@ elif mode == "install":
 elif mode == "remove":
     remove_package(package)
 elif mode == "help":
-    print("Usage: gopm {-u|-i|-r} [-v] <package> ...")
-    print("-u / --update         Download all packages")
-    print("-s / --upgrade        Upgrade all packages to the latest version")
-    print("-i / --install        Install a package from a git URI or search and install a package from Github")
-    print("-r / --remove         Uninstall the specified package")
+    print("Usage: gopm [COMMAND] [-v] <package> ...")
+    print("u / update         Download all packages")
+    print("s / upgrade        Upgrade all packages to the latest version")
+    print("i / install        Install a package from a git URI or search and install a package from Github")
+    print("r / remove         Uninstall the specified package")
     print("-v / --verbose        Enable verbose logging")
-    print("-h / --help           Show this help message")
+    print("h / help           Show this help message")
 
 os.rmdir(tmp_repos_dir)
