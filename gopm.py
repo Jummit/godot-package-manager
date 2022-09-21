@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from argparse import ArgumentParser
 import os
 import subprocess
 import shutil
@@ -6,26 +7,44 @@ import sys
 import requests
 import json
 import tempfile
+from pathlib import Path
 
-verbose = "--verbose" in sys.argv or "-v" in sys.argv
-if verbose:
-    def print_verbose(*args):
-        for arg in args:
-            print(arg)
-else:   
-    print_verbose = lambda *a: None
+verbose = True
 
-tmp_repos_dir = os.path.join(tempfile.gettempdir(), "godot_packages")
+
+def print_verbose(*args):
+    if not verbose:
+        return
+    for arg in args:
+        print(arg)
+
+
+tmp_repos_dir = Path(tempfile.gettempdir()) / "godot_packages"
 if not os.path.exists(tmp_repos_dir):
     os.mkdir(tmp_repos_dir)
-project_dir = os.getcwd()
+project_dir = Path(os.getcwd())
+modules_file = project_dir / "godotmodules.txt"
 
-def run_git_command(command, working_directory):
+
+def check_modules_file():
+    if not modules_file.is_file():
+        print("""No packages installed. Install them one like this:
+
+    > gopm install search term
+
+    or
+
+    > gopm install /path/to/git/repo
+    """)
+        sys.exit(1)
+
+
+def run_git_command(command: str, working_directory: Path):
     """
     Runs a git command inside `working_directory`. If `verbose` is false,
     passes the --quiet option to the command.
     """
-    print_verbose("Running git " + command + " inside " + working_directory)
+    print_verbose(f"Running git {command} inside {working_directory}")
     args = command.split(" ")
     args.insert(0, "git")
     if not verbose:
@@ -34,32 +53,31 @@ def run_git_command(command, working_directory):
             args, cwd=working_directory, stdout=subprocess.PIPE).stdout
 
 
-def update_packages(modules_file, indent=0):
+def update_packages(file: Path = modules_file, indent: int = 0):
     """
     Clones or updates the repositories listed in `modules_file`
     and installs the addons of the module.
     """
-    with open(modules_file, "r") as file:
-        for package in file:
-            update_package(package)
+    check_modules_file()
+    for package in open(modules_file):
+        update_package(package.strip())
 
 
-def update_package(package, indent=0):
+def update_package(package: str, indent: int = 0):
     """
     Clones or updates the given repository.
     """
-    if package.isspace():
+    if package.isprintable():
         return
-    repo, version = package.strip().split(" ")
-    if "/.git" in repo:
-        # Get the name of a local git repo like `/path/to/repo/.git`.
-        name = repo.split("/")[-2]
-    else:
+    repo, version = package.split(" ")
+    if repo.endswith(".git"):
         # Get the name of a git url like `https://github.com/user/repo.git`
         name = repo.split("/")[-1].split(".")[-2]
+    else:
+        name = repo.split("/")[-1]
     print("	" * indent + f"[{name}] version {version[:6]} from {repo}")
-    run_git_command(f"clone {repo}", f"{tmp_repos_dir}")
-    run_git_command(f"checkout {version}", f"{tmp_repos_dir}/{name}")
+    run_git_command(f"clone {repo}", tmp_repos_dir)
+    run_git_command(f"checkout {version}", tmp_repos_dir / name)
 
     for addon in os.listdir(f"{tmp_repos_dir}/{name}/addons"):
         print("	" * indent + f"	addon [{addon}]")
@@ -68,21 +86,18 @@ def update_package(package, indent=0):
             shutil.rmtree(destination)
         shutil.copytree(f"{tmp_repos_dir}/{name}/addons/{addon}", destination)
     shutil.rmtree(f"{tmp_repos_dir}/{name}")
-    
-    submodule_file = f"{tmp_repos_dir}/{name}/godotmodules.txt"
-    if os.path.isfile(submodule_file):
-        update_packages(submodule_file, indent + 1)
+    update_packages(tmp_repos_dir / "godotmodules.txt", indent + 1)
 
 
-def upgrade_packages(modules_file, indent=0):
+def upgrade_packages(modules_file: Path, indent=0):
     """
     Clones the repositories listed in `modules_file`
     and changes the version if there is a new commit.
     """
-    with open(modules_file, "r") as file:
-        for package in file:
-            if package:
-                upgrade_package(package)
+    check_modules_file()
+    with open(modules_file) as file:
+        for package in filter(lambda x: not x.isprintable(), file):
+            upgrade_package(package)
 
 
 def upgrade_package(package):
@@ -90,16 +105,17 @@ def upgrade_package(package):
     Clones the given repository and puts the version in the godotmodules file.
     """
     repo = package.split()[0]
+    to_upgrade = Path(f"{tmp_repos_dir}/to_upgrade")
     run_git_command(f"clone {repo} to_upgrade", f"{tmp_repos_dir}")
-    latest_commit = run_git_command("rev-parse HEAD",
-            f"{tmp_repos_dir}/to_upgrade").decode('UTF-8')[:7]
+    latest_commit = run_git_command("rev-parse HEAD", to_upgrade)
+    latest_commit = latest_commit.decode('UTF-8')[:7]
     shutil.rmtree(f"{tmp_repos_dir}/to_upgrade")
     print(f"Upgrading {repo} to {latest_commit}")
-    
+
     modules = ""
     with open(f"{project_dir}/godotmodules.txt", "r") as modulesfile:
         for line in modulesfile.readlines():
-            if package.strip() in line:
+            if package in line:
                 modules += f"{repo} {latest_commit}\n"
             else:
                 modules += line
@@ -118,14 +134,15 @@ def install_package(name):
             return
         else:
             print(f"Installed {name}")
-            modulesfile.write(name + "\n")
+            modulesfile.write(name + " master\n")
 
 
 def browse_github(name):
     """
     Searches Github for packages and asks the user which one to install.
     """
-    query = f"https://api.github.com/search/repositories?q={name} language:GDScript&per_page=10"
+    query = f"https://api.github.com/search/repositories?q=\
+{name} language:GDScript&per_page=10"
     print_verbose("query: " + query)
     text = requests.get(query).text
     items = json.loads(text).get("items")
@@ -142,7 +159,8 @@ def browse_github(name):
         print("No package selected")
         return
     selected = items[package_num - 1]
-    last_commit = requests.get(selected.get("commits_url").replace('{/sha}', "")).json()[0].get("sha")[:7]
+    commits_url = selected.get("commits_url").replace('{/sha}', "")
+    last_commit = requests.get(commits_url).json()[0].get("sha")[:7]
     dependency = f"{selected['clone_url']} {last_commit}"
     print_verbose(dependency)
     install_package(dependency)
@@ -168,7 +186,8 @@ def remove_package(addon):
                 # Get the name of a local git repo like `/path/to/repo/.git`.
                 name = repo.split("/")[-2]
             else:
-                # Get the name of a git url like `https://github.com/user/repo.git`
+                # Get the name of a git url like
+                # `https://github.com/user/repo.git`.
                 name = repo.split("/")[-1].split(".")[-2]
             print_verbose(f"Cloning {repo} into {tmp_repos_dir}")
             run_git_command(f"clone {repo}", f"{tmp_repos_dir}")
@@ -181,62 +200,43 @@ def remove_package(addon):
         modulesfile.write(modules)
 
 
-def show_help():
-    """Shows the command line usage of the program."""
-    print("Usage: gopm [COMMAND] [-v] <package> ...")
-    print("u / update       Download all packages")
-    print("s / upgrade      Upgrade all packages to the latest version")
-    print("i / install      Install a package from a git URI or search and install a package from Github")
-    print("r / remove       Uninstall the specified package")
-    print("-v / --verbose   Enable verbose logging")
-    print("-h / --help      Show this help message")
+def install(args):
+    if os.path.exists(args.package):
+        install_package(args.package)
+    else:
+        browse_github(args.package)
+    update_packages(modules_file)
 
-MODES = {
-    "update": ["u", "update"],
-    "upgrade": ["s", "upgrade"],
-    "install": ["i", "install"],
-    "remove": ["r", "remove"],
-    "help": ["-h", "--help"],
-}
 
 def main():
-    mode = "help"
-    for possible_mode in MODES:
-        for flag in MODES[possible_mode]:
-            if flag in sys.argv:
-                mode = possible_mode
-                break
-    package = ""
-    allflags = ["-v", "--verbose"]
-    for flags in MODES.values():
-        allflags += flags
-    for arg in sys.argv[1:]:
-        if not arg in allflags:
-            package += arg + " "
+    parser = ArgumentParser()
+    parser.add_argument("-v", "--verbose", help='Enable verbose logging')
+    subparsers = parser.add_subparsers()
+    update_parser = subparsers.add_parser("update", aliases=["u"], help="\
+            Download all packages")
+    update_parser.set_defaults(func=update_packages)
+    upgrade_parser = subparsers.add_parser("upgrade", aliases=["s"], help="\
+            Upgrade all packages to the latest version")
+    upgrade_parser.set_defaults(func=upgrade_packages)
+    install_parser = subparsers.add_parser("install", aliases=["i"], help="\
+            Install a package from a git URI or search and install a package\
+            from Github")
+    install_parser.add_argument("package", help="\
+            Git URI or name to search on Github")
+    install_parser.set_defaults(func=install)
+    remove_parser = subparsers.add_parser("remove", aliases=["r"], help="\
+            Uninstall the specified package")
+    remove_parser.add_argument("package", help="\
+            Name to match in the modules file")
+    remove_parser.set_defaults(func=remove_package)
+    args = parser.parse_args()
 
-    if mode in ["install", "remove"] and not package:
-        return print("No package specified")
+    if "func" in args:
+        args.func(args)
+        tmp_repos_dir.rmdir()
+    else:
+        parser.print_help()
 
-    modules_file = f"{project_dir}/godotmodules.txt"
-    if mode in ["update", "upgrade", "remove"] and not os.path.isfile(modules_file):
-        return print("No packages installed")
-
-    if mode == "update":
-        update_packages(modules_file)
-    elif mode == "upgrade":
-        upgrade_packages(modules_file)
-    elif mode == "install":
-        if package.endswith(".git"):
-            install_package(package)
-        else:
-            browse_github(package)
-        update_packages(modules_file)
-    elif mode == "remove":
-        remove_package(package)
-    elif mode == "help":
-        show_help()
-
-    os.rmdir(tmp_repos_dir)
 
 if __name__ == "__main__":
     main()
