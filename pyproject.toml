@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gopm"
+version = "1.0.0"
+authors = [
+  { name="Jummit", email="jummit@web.com" },
+]
+description = "A package manager for the Godot Engine"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "requests"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/jummit/godot-package-manager"
+"Bug Tracker" = "https://github.com/jummit/godot-package-manager/issues"
+
+[project.scripts]
+gopm = "gopm.gopm:main"
