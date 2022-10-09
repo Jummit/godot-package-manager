@@ -25,4 +25,4 @@ dependencies = [
 "Bug Tracker" = "https://github.com/jummit/godot-package-manager/issues"
 
 [project.scripts]
-gopm = "gopm.gopm:main"
+gopm = "gopm.main:main"
