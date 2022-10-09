@@ -2,6 +2,14 @@
 
 A python script to download and update git-based packages and their dependencies.
 
+
+## Installation
+
+```bash
+git clone git@github.com:Jummit/godot-package-manager.git
+pip install godot-package-manager
+```
+
 ## Usage
 
 Run `gopm.py` in the game directory. Use `gopm -h` to show the usage:
