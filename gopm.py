@@ -30,7 +30,7 @@ def check_modules_file():
         sys.exit(1)
 
 
-def run_git_command(command: str, working_directory: Path, verbose: bool):
+def run_git_command(command: str, working_directory: Path, verbose: bool) -> str | None:
     """
     Runs a git command inside `working_directory`. If `verbose` is false,
     passes the --quiet option to the command.
@@ -41,8 +41,11 @@ def run_git_command(command: str, working_directory: Path, verbose: bool):
     args.insert(0, "git")
     if not verbose:
         args.append("-q")
-    return subprocess.run(
-            args, cwd=working_directory, stdout=subprocess.PIPE).stdout
+    result = subprocess.run(args, cwd=working_directory,
+            stdout=subprocess.PIPE)
+    if result.returncode and result.returncode != 128:
+        return None
+    return result.stdout.decode('UTF-8')
 
 
 def update_root_packages(args, verbose):
@@ -71,7 +74,8 @@ def update_package(verbose, package: str, indent: int = 0):
     else:
         name = repo.split("/")[-1]
     print("	" * indent + f"[{name}] version {version[:6]} from {repo}")
-    run_git_command(f"clone {repo}", tmp_repos_dir, verbose)
+    if run_git_command(f"clone {repo}", tmp_repos_dir, verbose) is None:
+        return
     run_git_command(f"checkout {version}", tmp_repos_dir / name, verbose)
 
     for addon in os.listdir(f"{tmp_repos_dir}/{name}/addons"):
@@ -94,7 +98,8 @@ def upgrade_packages(args, verbose):
     check_modules_file()
     with open(modules_file) as file:
         for package in filter(lambda x: not x.isprintable(), file):
-            upgrade_package(package, verbose)
+            if package.strip().isprintable():
+                upgrade_package(package.strip(), verbose)
 
 
 def upgrade_package(package, verbose):
@@ -103,10 +108,10 @@ def upgrade_package(package, verbose):
     """
     repo = package.split()[0]
     to_upgrade = Path(f"{tmp_repos_dir}/to_upgrade")
-    run_git_command(f"clone {repo} to_upgrade", f"{tmp_repos_dir}", verbose)
-    latest_commit = run_git_command("rev-parse HEAD", to_upgrade, verbose)
-    latest_commit = latest_commit.decode('UTF-8')[:7]
-    shutil.rmtree(f"{tmp_repos_dir}/to_upgrade")
+    if run_git_command(f"clone {repo} to_upgrade", f"{tmp_repos_dir}", verbose) is None:
+        return
+    latest_commit = run_git_command("rev-parse HEAD", to_upgrade, verbose)[:7]
+    shutil.rmtree(to_upgrade)
     print(f"Upgrading {repo} to {latest_commit}")
 
     modules = ""
@@ -131,7 +136,7 @@ def install_package(package):
             return
         else:
             print(f"Installed {package}")
-            modulesfile.write(package)
+            modulesfile.write(package + " master\n")
 
 
 def browse_github(name, verbose):
@@ -236,7 +241,7 @@ def main():
 
     if "func" in args:
         args.func(args, args.verbose)
-        tmp_repos_dir.rmdir()
+        shutil.rmtree(tmp_repos_dir)
     else:
         parser.print_help()
 
