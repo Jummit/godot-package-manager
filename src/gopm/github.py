@@ -7,12 +7,13 @@ from gopm.search_provider import SearchProvider, Result
 
 class GithubResult(Result):
     def __init__(self, content: dict):
-        super().__init__(content["full_name"], content["description"], "master", content["clone_url"])
+        super().__init__(content["full_name"], content["description"],
+                "master", content["clone_url"])
         self.commits_url = content["commits_url"].replace('{/sha}', "")
 
     @property
     def latest_version(self) -> str:
-        return requests.get(self.commits_url).json()[0].get("sha")[:7]
+        return requests.get(self.commits_url).json()[0].get("sha")[:8]
 
     @latest_version.setter
     def latest_version(self, value) -> None:

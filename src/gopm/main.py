@@ -5,7 +5,7 @@ import shutil
 import sys
 import tempfile
 from distutils.util import strtobool
-from typing import List
+from typing import List, Tuple
 from pathlib import Path
 from gopm.search_provider import Result
 from gopm.project import Project, Package
@@ -59,38 +59,54 @@ def install(project: Project, search: List[str]):
         package = Package(selected.url, selected.latest_version)
         project.save_packages(installed + [package])
         print(f"Installed {package.name}")
-    project.update_packages(tmp_repos_dir)
+    for package in project.get_installed():
+        project.update_package(package, tmp_repos_dir)
 
 
 def update(project: Project):
     if len(project.get_installed()) == 0:
         show_install_help()
     else:
-        project.update_packages(tmp_repos_dir, sys.stdout)
+        for package in project.get_installed():
+            project.update_package(package, tmp_repos_dir)
 
 
 def upgrade(project: Project):
     if len(project.get_installed()) == 0:
-        show_install_help()
+        return show_install_help()
+    packages = project.get_installed()
+    any_installed = False
+    for package in packages:
+        latest = project.get_latest_version(tmp_repos_dir, package)
+        if package.version == latest:
+            continue
+        any_installed = True
+        print(f"Upgrading {package.name} from {package.version} to {latest}")
+        package.version = latest
+        project.update_package(package, tmp_repos_dir)
+    if any_installed:
+        project.save_packages(packages)
     else:
-        project.upgrade_packages(tmp_repos_dir, sys.stdout)
+        print("All packages are already on the latest version.")
 
 
 def remove(project: Project, package: str):
     installed = project.get_installed()
-    matches = list(filter(lambda p: package.lower() in p.name.lower(), installed))
+    matches = list(filter(lambda p: package.lower() in p.name.lower(),
+            installed))
     match len(matches):
         case 0:
-            print(f"No package installed that contains the word {package}")
+            print(f'No package installed that contains the word "{package}"')
         case 1:
             match = matches[0]
-            answer = input(f"Really remove {match.name}?\n[y/N]")
+            answer = input(f'Really remove "{match.name}"?\n[y/N] ')
             if answer and strtobool(answer):
                 installed.remove(match)
                 project.save_packages(installed)
                 print(f"Removed {match.name}")
         case _:
-            print(f"Found multiple results, be more specific: {', '.join(map(lambda p: p.name, matches))}")
+            names = ', '.join(map(lambda p: p.name, matches))
+            print(f"Found multiple results, be more specific: {names}")
 
 
 def list_packages(project: Project):

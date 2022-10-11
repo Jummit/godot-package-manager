@@ -3,7 +3,7 @@
 from pathlib import Path
 from io import StringIO, TextIOBase
 from gopm import git
-from typing import List
+from typing import List, Tuple
 import shutil
 import sys
 
@@ -31,16 +31,9 @@ class Project:
         except FileNotFoundError:
             return []
 
-    def update_packages(self, tmp: Path, out = sys.stdout):
-        """Clones or updates the repositories listed in `modules_file`
-        and installs the addons of the module.
-        """
-        for package in self.get_installed():
-            self.update_package(package, out, tmp)
-
-    def update_package(self, package: Package, out: StringIO, tmp: Path):
+    def update_package(self, package: Package, tmp: Path, out = sys.stdout):
         """Clones or updates the given repository."""
-        out.write(f"[{package.name}] version {package.version[:6]} from {package.uri}\n")
+        out.write(f"[{package.name}] version {package.version[:8]} from {package.uri}\n")
         target = tmp / package.name
         git.clone_repo(package.uri, tmp, package.version)
 
@@ -56,24 +49,21 @@ class Project:
         project = Project(target)
         for package in project.get_installed():
             output = StringIO()
-            self.update_package(package, output, tmp)
+            self.update_package(package, tmp, output)
             out.write(output.read().replace("\n", "\n\t"))
         shutil.rmtree(target)
 
-    def upgrade_packages(self, tmp: Path, out = sys.stdout):
-        """Clones the repositories listed in `modules_file`
-        and changes the version if there is a new commit.
+    def get_latest_version(self, tmp: Path, package: Package) -> str:
+        """Clones the repositories of the package
+        and returns the latest version available.
         """
-        to_upgrade = tmp / "to_upgrade"
-        to_upgrade.mkdir()
-        for package in self.get_installed():
-            git.clone_repo(package.uri, to_upgrade, package.version)
-            latest = git.get_latest_commit(to_upgrade / package.name)[:10]
-            if latest is None:
-                continue
-            shutil.rmtree(to_upgrade)
-            out.write(f"Upgrading {package.name} to {latest}\n")
-            package.version = latest
+        tmp.mkdir(parents=True, exist_ok=True)
+        into = git.clone_repo(package.uri, tmp, package.version)
+        latest = git.get_latest_commit(into)[:8]
+        shutil.rmtree(into)
+        if latest is None:
+            return package.version
+        return latest
 
     def install_package(self, package: Package):
         """Adds a package to the godotmodules file."""
@@ -81,4 +71,5 @@ class Project:
 
     def save_packages(self, packages: List[Package]):
         with open(self.modules_file, "w") as file:
-            file.writelines(list(map(lambda x: f"{x.uri} {x.version}\n", packages)))
+            file.writelines(list(map(lambda x: f"{x.uri} {x.version}\n",
+                    packages)))
