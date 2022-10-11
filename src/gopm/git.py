@@ -1,3 +1,5 @@
+"""Git utilities."""
+
 import subprocess
 import urllib
 from pathlib import Path

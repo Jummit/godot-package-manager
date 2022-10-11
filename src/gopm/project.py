@@ -1,3 +1,5 @@
+"""A representation of the packages a Godot project has installed."""
+
 from pathlib import Path
 from io import StringIO, TextIOBase
 from gopm import git

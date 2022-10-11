@@ -1,3 +1,5 @@
+"""The main command line interface of the package manager."""
+
 from argparse import ArgumentParser
 import shutil
 import sys

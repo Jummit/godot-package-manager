@@ -1,7 +1,12 @@
+"""Classes for searching package databases."""
+
 from typing import List
 
 class Result:
-    def __init__(self, name: str, description: str, latest_version: str, url: str):
+    """A single result from a search."""
+
+    def __init__(self, name: str, description: str, latest_version: str,
+            url: str):
         self.name = name
         self.description = description
         self.url = url

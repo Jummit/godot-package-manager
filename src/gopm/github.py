@@ -1,3 +1,5 @@
+"""Search provider using Github's API."""
+
 import requests
 import json
 from typing import List
