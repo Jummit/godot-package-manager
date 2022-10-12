@@ -170,7 +170,7 @@ def main():
         err = e.stderr.decode("unicode_escape").strip()
         cmd = " ".join(e.cmd)
         print(f'Error running Git command "{cmd}":\n\t{err}')
-    # shutil.rmtree(tmp_repos_dir)
+    shutil.rmtree(tmp_repos_dir)
 
 
 if __name__ == "__main__":
