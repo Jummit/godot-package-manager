@@ -42,7 +42,9 @@ def download_addons(project: Project, package: Package, indent: int = 0):
     print(f"{indent_str}[{package.name}] version {version} from {package.uri}")
     (addons, depedencies) = project.download_addons(package, tmp_repos_dir)
     for addon in addons:
-        print(f"\t{indent_str}Addon [{addon}]\n")
+        print(f"\t{indent_str}Addon [{addon}]")
+    if len(addons) == 0:
+        print(f"\t{indent_str}Package contains no addons.")
     for dependency in depedencies:
         download_addons(project, dependency, indent + 1)
 
@@ -51,14 +53,13 @@ def install(project: Project, search: List[str]):
     term = " ".join(search)
     installed = project.get_installed()
     path = Path(term)
-    package : Package | None = None
+    package : Package
     if path.is_dir():
         target = tmp_repos_dir / path.stem
         git.clone_repo(term, target)
         latest = git.get_latest_commit(target)
         shutil.rmtree(target)
         package = Package(term, latest)
-        project.save_packages(installed + [package])
     else:
         results : List[Result] = []
         for provider in search_providers:
@@ -75,7 +76,9 @@ def install(project: Project, search: List[str]):
             return
         selected = results[package_num - 1]
         package = Package(selected.url, selected.latest_version)
-        project.save_packages(installed + [package])
+    if any(map(lambda x: x.name == package.name, installed)):
+        return print("Package is already installed.")
+    project.save_packages(installed + [package])
     download_addons(project, package)
     print(f"Installed {package.name}")
 
@@ -92,19 +95,15 @@ def upgrade(project: Project):
     if len(project.get_installed()) == 0:
         return show_install_help()
     packages = project.get_installed()
-    any_installed = False
     for package in packages:
-        latest = project.get_latest_version(tmp_repos_dir, package)
+        latest = package.get_latest_version(tmp_repos_dir)
         if package.version == latest:
+            print(f"{package.name} is up-to-date.")
             continue
-        any_installed = True
         print(f"Upgrading {package.name} from {package.version} to {latest}")
         package.version = latest
         download_addons(project, package)
-    if any_installed:
-        project.save_packages(packages)
-    else:
-        print("All packages are already on the latest version.")
+    project.save_packages(packages)
 
 
 def remove(project: Project, package: str):

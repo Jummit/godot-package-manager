@@ -17,6 +17,17 @@ class Package:
         self.version = version
         self.name = Path(uri).stem
 
+    def get_latest_version(self, tmp: Path) -> str:
+       """Clones the repositories of the package and returns the
+       latest version available.
+       """
+       repo = tmp / self.name
+       git.clone_repo(self.uri, repo)
+       latest = git.get_latest_commit(repo)[:8]
+       shutil.rmtree(repo)
+       return latest
+
+
 class Project:
     def __init__(self, path: Path):
         self.path = path
@@ -65,19 +76,6 @@ class Project:
         shutil.rmtree(repo)
         return (addon_names, sub_packages)
 
-    def get_latest_version(self, tmp: Path, package: Package) -> str:
-        """Clones the repositories of the package and returns the
-        latest version available.
-        """
-        repo = tmp / package.name
-        git.clone_repo(package.uri, repo)
-        latest = git.get_latest_commit(repo)[:8]
-        shutil.rmtree(repo)
-        return latest
-
-    def install_package(self, package: Package):
-        """Adds a package to the godotmodules file."""
-        self.save_packages(self.get_installed() + [package])
 
     def save_packages(self, packages: List[Package]):
         """Writes the package list to the godotmodules.txt file."""
