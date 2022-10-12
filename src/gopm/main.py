@@ -1,6 +1,7 @@
 """The main command line interface of the package manager."""
 
 from argparse import ArgumentParser
+from subprocess import CalledProcessError
 import shutil
 import sys
 import tempfile
@@ -31,16 +32,33 @@ def show_install_help():
     """)
 
 
+def download_addons(project: Project, package: Package, indent: int = 0):
+    """Download addons of a project and their dependencies.
+    
+    Print status  output to the screen.
+    """
+    indent_str = '\t' * indent
+    version = package.version[:8]
+    print(f"{indent_str}[{package.name}] version {version} from {package.uri}")
+    (addons, depedencies) = project.download_addons(package, tmp_repos_dir)
+    for addon in addons:
+        print(f"\t{indent_str}Addon [{addon}]\n")
+    for dependency in depedencies:
+        download_addons(project, dependency, indent + 1)
+
+
 def install(project: Project, search: List[str]):
     term = " ".join(search)
     installed = project.get_installed()
     path = Path(term)
+    package : Package | None = None
     if path.is_dir():
         target = tmp_repos_dir / path.stem
         git.clone_repo(term, target)
         latest = git.get_latest_commit(target)
-        if latest:
-            project.save_packages(installed + [Package(term, latest)])
+        shutil.rmtree(target)
+        package = Package(term, latest)
+        project.save_packages(installed + [package])
     else:
         results : List[Result] = []
         for provider in search_providers:
@@ -58,9 +76,8 @@ def install(project: Project, search: List[str]):
         selected = results[package_num - 1]
         package = Package(selected.url, selected.latest_version)
         project.save_packages(installed + [package])
-        print(f"Installed {package.name}")
-    for package in project.get_installed():
-        project.update_package(package, tmp_repos_dir)
+    download_addons(project, package)
+    print(f"Installed {package.name}")
 
 
 def update(project: Project):
@@ -68,7 +85,7 @@ def update(project: Project):
         show_install_help()
     else:
         for package in project.get_installed():
-            project.update_package(package, tmp_repos_dir)
+            download_addons(project, package)
 
 
 def upgrade(project: Project):
@@ -83,7 +100,7 @@ def upgrade(project: Project):
         any_installed = True
         print(f"Upgrading {package.name} from {package.version} to {latest}")
         package.version = latest
-        project.update_package(package, tmp_repos_dir)
+        download_addons(project, package)
     if any_installed:
         project.save_packages(packages)
     else:
@@ -140,13 +157,20 @@ def main():
     remove_parser.add_argument("package",
             help="Name to match in the modules file")
     remove_parser.set_defaults(func=remove)
+
     args = vars(parser.parse_args())
     try:
         func = args.pop("func")
-        func(Project(Path()), **args)
-        shutil.rmtree(tmp_repos_dir)
     except KeyError:
         parser.print_help()
+
+    try:
+        func(Project(Path()), **args)
+    except CalledProcessError as e:
+        err = e.stderr.decode("unicode_escape").strip()
+        cmd = " ".join(e.cmd)
+        print(f'Error running Git command "{cmd}":\n\t{err}')
+    # shutil.rmtree(tmp_repos_dir)
 
 
 if __name__ == "__main__":

@@ -1,11 +1,11 @@
 """A representation of the packages a Godot project has installed."""
 
 from pathlib import Path
-from io import StringIO, TextIOBase
 from gopm import git
 from typing import List, Tuple
+from send2trash import send2trash
+import random
 import shutil
-import sys
 
 class Package:
     """An installable Godot package."""
@@ -31,38 +31,48 @@ class Project:
         except FileNotFoundError:
             return []
 
-    def update_package(self, package: Package, tmp: Path, out = sys.stdout):
-        """Clones or updates the given repository."""
-        out.write(f"[{package.name}] version {package.version[:8]} from {package.uri}\n")
-        target = tmp / package.name
-        git.clone_repo(package.uri, tmp, package.version)
+    def download_addons(self, package: Package, tmp: Path
+            ) -> Tuple[List[str], List[Package]]:
+        """Install the addons of a package.
+        
+        Clones the repository of the package and copies the addons
+        inside the addons folder into the project. Returns the list
+        of installed addons and the dependencies of the package.
+        `tmp` is the folder into which the repository will be cloned.
+        
+        Existing addons with the same name as installed addons will be
+        moved to the trash.
 
-        target_addons = target / "addons"
+        *Example:*
+
+        ```python
+        (addons, dependencies) = project.download_addons(package, Path())
+        ```
+        """
+        repo = tmp / package.name
+        git.clone_repo(package.uri, repo, package.version)
         addons = self.path / "addons"
         addons.mkdir(exist_ok=True)
-        for addon in target_addons.glob("*"):
-            out.write(f"	Addon [{addon.stem}]\n")
+        addon_names : List[str] = []
+        for addon in (repo / "addons").glob("*"):
+            addon_names.append(addon.stem)
             destination = addons / addon.name
             if destination.is_dir():
-                shutil.rmtree(destination)
+                send2trash(destination)
             shutil.copytree(addon, destination)
-        project = Project(target)
-        for package in project.get_installed():
-            output = StringIO()
-            self.update_package(package, tmp, output)
-            out.write(output.read().replace("\n", "\n\t"))
-        shutil.rmtree(target)
+        project = Project(repo)
+        sub_packages = project.get_installed()
+        shutil.rmtree(repo)
+        return (addon_names, sub_packages)
 
     def get_latest_version(self, tmp: Path, package: Package) -> str:
-        """Clones the repositories of the package
-        and returns the latest version available.
+        """Clones the repositories of the package and returns the
+        latest version available.
         """
-        tmp.mkdir(parents=True, exist_ok=True)
-        into = git.clone_repo(package.uri, tmp, package.version)
-        latest = git.get_latest_commit(into)[:8]
-        shutil.rmtree(into)
-        if latest is None:
-            return package.version
+        repo = tmp / package.name
+        git.clone_repo(package.uri, repo)
+        latest = git.get_latest_commit(repo)[:8]
+        shutil.rmtree(repo)
         return latest
 
     def install_package(self, package: Package):
@@ -70,6 +80,6 @@ class Project:
         self.save_packages(self.get_installed() + [package])
 
     def save_packages(self, packages: List[Package]):
+        """Writes the package list to the godotmodules.txt file."""
         with open(self.modules_file, "w") as file:
-            file.writelines(list(map(lambda x: f"{x.uri} {x.version}\n",
-                    packages)))
+            file.writelines(map(lambda x: f"{x.uri} {x.version}\n", packages))
