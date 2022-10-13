@@ -55,11 +55,8 @@ def install(project: Project, search: List[str]):
     path = Path(term)
     package : Package
     if path.is_dir():
-        target = tmp_repos_dir / path.stem
-        git.clone_repo(term, target)
-        latest = git.get_latest_commit(target)
-        shutil.rmtree(target)
-        package = Package(term, latest)
+        package = Package(term, "")
+        package.version = package.get_latest_version(tmp_repos_dir)
     else:
         results : List[Result] = []
         for provider in search_providers:
