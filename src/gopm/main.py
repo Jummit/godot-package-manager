@@ -14,11 +14,6 @@ from gopm import git, github
 
 
 tmp_repos_dir = Path(tempfile.gettempdir()) / "godot_packages"
-if tmp_repos_dir.exists():
-    shutil.rmtree(tmp_repos_dir)
-tmp_repos_dir.mkdir()
-
-
 search_providers = [github.GithubSearchProvider()]
 
 def show_install_help():
@@ -134,7 +129,9 @@ def main():
     parser = ArgumentParser()
     subparsers = parser.add_subparsers()
     update_parser = subparsers.add_parser("update", aliases=["u"],
-            help="Download all packages inside the modules file")
+            help=("Download all packages inside the modules file and installs" +
+                 " their addons. WARNING: Existing addons with the same name" +
+                 " will be moved to the trash."))
     update_parser.set_defaults(func=update)
     upgrade_parser = subparsers.add_parser("upgrade", aliases=["s"],
             help="Update all packages to the latest version")
@@ -158,8 +155,11 @@ def main():
     try:
         func = args.pop("func")
     except KeyError:
-        parser.print_help()
+        return parser.print_help()
 
+    if tmp_repos_dir.exists():
+        shutil.rmtree(tmp_repos_dir)
+    tmp_repos_dir.mkdir()
     try:
         func(Project(Path()), **args)
     except CalledProcessError as e:
