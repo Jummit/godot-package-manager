@@ -1,6 +1,6 @@
 # Godot Package Manager
 
-A python script to download and update git-based packages and their dependencies.
+A python script to download and update Git-based packages and their dependencies.
 
 
 ## Installation
