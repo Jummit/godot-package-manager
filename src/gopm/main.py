@@ -1,37 +1,37 @@
 """The main command line interface of the package manager."""
 
-from argparse import ArgumentParser
-from subprocess import CalledProcessError
 import shutil
 import sys
 import tempfile
-from distutils.util import strtobool
-from typing import List, Tuple
-from pathlib import Path
-from gopm.search_provider import Result
-from gopm.project import Project, Package
-from gopm import git, github
 
+from argparse import ArgumentParser
+from gopm import git
+from gopm.project import Project, Package
+from gopm.search.github import GithubSearchProvider
+from gopm.search.gitlab import GitLabSearchProvider
+from gopm.search.search_provider import Result, SearchProvider
+from pathlib import Path
+from subprocess import CalledProcessError
+from typing import List, Tuple
 
 tmp_repos_dir = Path(tempfile.gettempdir()) / "godot_packages"
 search_providers = [github.GithubSearchProvider()]
 
 def show_install_help():
-    print("""No packages installed. Install them one like this:
+    """Print information on how to use the utility."""
 
-    > gopm install search term
+    print("""No packages installed. Install one like this:
+
+    > gopm install [search term]
 
     or
 
-    > gopm install /path/to/git/repo
+    > gopm install /path/to/git/repo.git
     """)
 
 
 def download_addons(project: Project, package: Package, indent: int = 0):
-    """Download addons of a project and their dependencies.
-    
-    Print status  output to the screen.
-    """
+    """Download addons of a project and their dependencies."""
     indent_str = '\t' * indent
     version = package.version[:8]
     print(f"{indent_str}[{package.name}] version {version} from {package.uri}")
@@ -45,6 +45,9 @@ def download_addons(project: Project, package: Package, indent: int = 0):
 
 
 def install(project: Project, search: List[str]):
+    """Install a package from a path or select from a list of
+    repositories matching the search.
+    """
     term = " ".join(search)
     installed = project.get_installed()
     path = Path(term)
@@ -64,8 +67,7 @@ def install(project: Project, search: List[str]):
         try:
             package_num = int(input("Package to install: "))
         except (ValueError, KeyboardInterrupt):
-            print("No package selected")
-            return
+            return print("No package selected")
         selected = results[package_num - 1]
         package = Package(selected.url, selected.latest_version)
     if any(map(lambda x: x.name == package.name, installed)):
@@ -108,7 +110,7 @@ def remove(project: Project, package: str):
         case 1:
             match = matches[0]
             answer = input(f'Really remove "{match.name}"?\n[y/N] ')
-            if answer and strtobool(answer):
+            if answer and answer.lower() in {"y", "yes"}:
                 installed.remove(match)
                 project.save_packages(installed)
                 print(f"Removed {match.name}")

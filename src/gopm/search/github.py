@@ -1,9 +1,10 @@
 """Search provider using Github's API."""
 
-import requests
 import json
+import requests
+
+from gopm.search.search_provider import SearchProvider, Result
 from typing import List
-from gopm.search_provider import SearchProvider, Result
 
 class GithubResult(Result):
     def __init__(self, content: dict):

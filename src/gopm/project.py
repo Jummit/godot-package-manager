@@ -29,6 +29,8 @@ class Package:
 
 
 class Project:
+    """A Godot project with a list of installed packages."""
+
     def __init__(self, path: Path):
         self.path = path
         self.modules_file = path / "godotmodules.txt"
