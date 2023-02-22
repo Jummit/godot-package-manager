@@ -6,8 +6,7 @@ A python script to download and update Git-based packages and their dependencies
 ## Installation
 
 ```bash
-git clone git@github.com:Jummit/godot-package-manager.git
-pip install godot-package-manager
+pip install gopm
 ```
 
 ## Usage
