@@ -6,16 +6,15 @@ import tempfile
 
 from argparse import ArgumentParser
 from gopm import git
-from gopm.project import Project, Package
+from gopm import Project, Package
 from gopm.search.github import GithubSearchProvider
-from gopm.search.gitlab import GitLabSearchProvider
 from gopm.search.search_provider import Result, SearchProvider
 from pathlib import Path
 from subprocess import CalledProcessError
 from typing import List, Tuple
 
 tmp_repos_dir = Path(tempfile.gettempdir()) / "godot_packages"
-search_providers = [github.GithubSearchProvider()]
+search_providers = [GithubSearchProvider()]
 
 def show_install_help():
     """Print information on how to use the utility."""
@@ -78,6 +77,7 @@ def install(project: Project, search: List[str]):
 
 
 def update(project: Project):
+    """Download the addons of the installed packages."""
     if len(project.get_installed()) == 0:
         show_install_help()
     else:
@@ -86,6 +86,9 @@ def update(project: Project):
 
 
 def upgrade(project: Project):
+    """Update the addons of the installed packages to the latest
+    version.
+    """
     if len(project.get_installed()) == 0:
         return show_install_help()
     packages = project.get_installed()
@@ -101,6 +104,7 @@ def upgrade(project: Project):
 
 
 def remove(project: Project, package: str):
+    """Remove a package that contains a query."""
     installed = project.get_installed()
     matches = list(filter(lambda p: package.lower() in p.name.lower(),
             installed))
@@ -120,6 +124,7 @@ def remove(project: Project, package: str):
 
 
 def list_packages(project: Project):
+    """Print a list of installed packages."""
     installed = project.get_installed()
     if len(installed) == 0:
         show_install_help()

@@ -13,7 +13,7 @@ class Package:
     def __init__(self, uri: str, version: str):
         "The Git URI the package can be cloned from."
         self.uri = uri
-        "The Git commit of the package."
+        "The commit hash to check out."
         self.version = version
         self.name = Path(uri).stem
 
@@ -31,9 +31,9 @@ class Package:
 class Project:
     """A Godot project with a list of installed packages."""
 
-    def __init__(self, path: Path):
-        self.path = path
-        self.modules_file = path / "godotmodules.txt"
+    def __init__(self, path: Path | str):
+        self.path = Path(path)
+        self.modules_file = Path(path) / "godotmodules.txt"
 
     def get_installed(self) -> List[Package]:
         """Reads the modules file and lists the installed packages."""
@@ -44,7 +44,7 @@ class Project:
         except FileNotFoundError:
             return []
 
-    def download_addons(self, package: Package, tmp: Path
+    def download_addons(self, package: Package, tmp: Path | str
             ) -> Tuple[List[str], List[Package]]:
         """Install the addons of a package.
         
@@ -62,7 +62,7 @@ class Project:
         (addons, dependencies) = project.download_addons(package, Path())
         ```
         """
-        repo = tmp / package.name
+        repo = Path(tmp) / package.name
         git.clone_repo(package.uri, repo, package.version)
         addons = self.path / "addons"
         addons.mkdir(exist_ok=True)
