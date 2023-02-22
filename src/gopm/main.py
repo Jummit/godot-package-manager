@@ -40,7 +40,8 @@ def download_addons(project: Project, package: Package, indent: int = 0):
     if len(addons) == 0:
         print(f"\t{indent_str}Package contains no addons.")
     for dependency in depedencies:
-        download_addons(project, dependency, indent + 1)
+        addons += download_addons(project, dependency, indent + 1)
+    return addons
 
 
 def install(project: Project, search: List[str]):
@@ -72,7 +73,23 @@ def install(project: Project, search: List[str]):
     if any(map(lambda x: x.name == package.name, installed)):
         return print("Package is already installed.")
     project.save_packages(installed + [package])
-    download_addons(project, package)
+    installed = download_addons(project, package)
+
+    ignore_path = project.path / ".gitignore"
+    MARKER = "# Godot Packages\n"
+    if ignore_path.is_file():
+        with open(ignore_path) as ignore:
+            ignored = ignore.readlines()
+        if MARKER not in ignored:
+            ignored += ["\n", MARKER]
+        marker_pos = ignored.index(MARKER)
+        for addon in installed:
+            ignore_str = f"addons/{addon}\n"
+            if ignore_str not in ignored:
+                ignored.insert(marker_pos + 1, ignore_str)
+        with open(ignore_path, "w") as ignore:
+            ignore.writelines(ignored)
+
     print(f"Installed {package.name}")
 
 
