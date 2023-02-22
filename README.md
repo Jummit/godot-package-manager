@@ -1,7 +1,8 @@
 # Godot Package Manager
 
-A python script to download and update Git-based packages and their dependencies.
+[![PyPI version](https://badge.fury.io/py/gopm.svg)](https://pypi.org/project/gopm)
 
+A python script to download and update Git-based packages and their dependencies.
 
 ## Installation
 
