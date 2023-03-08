@@ -25,8 +25,6 @@ URI or search and install a package from Github
 
 `r / remove` Uninstall the specified package
 
-`-v / --verbose` Enable verbose logging
-
 `-h / --help` Show this help message
 
 Installed addons will be put in the `addons` folder.
