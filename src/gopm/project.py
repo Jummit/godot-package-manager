@@ -68,6 +68,8 @@ class Project:
         addons.mkdir(exist_ok=True)
         addon_names : List[str] = []
         for addon in (repo / "addons").glob("*"):
+            if not addon.is_dir():
+                continue
             addon_names.append(addon.stem)
             destination = addons / addon.name
             if destination.is_dir():
